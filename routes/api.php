@@ -1,19 +1,39 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\StaffController;
+use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\AdminController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
+// Public routes
+Route::post('/book-appointment', [AppointmentController::class, 'bookAppointment']);
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+// Staff authentication
+Route::post('/staff/login', [AuthController::class, 'login']);
+Route::post('/staff/verify-mfa', [AuthController::class, 'verifyMfa']);
+
+// Invitation acceptance (public)
+Route::post('/invitation/accept/{token}', [InvitationController::class, 'acceptInvitation']);
+
+// Protected routes
+Route::middleware('auth:sanctum')->group(function () {
+    // Authentication
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Staff routes
+    Route::get('/staff/me', [StaffController::class, 'getProfile']);
+    Route::put('/staff/me', [StaffController::class, 'updateProfile']);
+    Route::get('/staff/me/employment-info', [StaffController::class, 'getEmploymentInfo']);
+
+    // Appointment management (staff/admin)
+    Route::get('/appointments', [AppointmentController::class, 'getAppointments']);
+    Route::put('/appointments/{id}', [AppointmentController::class, 'updateAppointment']);
+
+    // Admin only routes
+    Route::middleware('admin')->group(function () {
+        Route::post('/invitations/send', [InvitationController::class, 'sendInvitation']);
+        // Add more admin routes here
+    });
 });
