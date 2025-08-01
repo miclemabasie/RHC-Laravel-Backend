@@ -56,7 +56,6 @@ class StaffController extends Controller
     public function getEmploymentInfo(Request $request)
     {
         $user = $request->user();
-
         // Get documents available to the staff
         $documents = $user->documents()
             ->whereIn('type', ['contract', 'payslip'])

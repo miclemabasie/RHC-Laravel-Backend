@@ -49,7 +49,12 @@ class InvitationController extends Controller
             'token' => $token,
             'invited_by' => $request->user()->id,
             'role' => $request->role,
-            'expires_at' => now()->addDays(7)
+            'expires_at' => now()->addDays(7),
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'job_title' => $request->job_title,
+            'department_unit' => $request->department_unit,
+            'start_date' => $request->start_date,
         ]);
 
         // Send invitation email (implement your email service)
@@ -57,6 +62,7 @@ class InvitationController extends Controller
 
         return response()->json([
             'message' => 'Invitation sent successfully',
+            'token' => $token
             // 'invitation' => $invitation
         ], 201);
     }
@@ -80,20 +86,22 @@ class InvitationController extends Controller
         // Create user
         $user = User::create([
             'email' => $invitation->email,
+            'name' => $invitation->first_name,
             'password' => Hash::make($request->password),
             'phone' => $request->phone,
             'role' => $invitation->role,
+
             'status' => 'active'
         ]);
 
         // Create staff profile
         StaffProfile::create([
             'user_id' => $user->id,
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'job_title' => $request->job_title,
-            'department_unit' => $request->department_unit,
-            'start_date' => $request->start_date
+            'first_name' => $invitation->first_name,
+            'last_name' => $invitation->last_name,
+            'job_title' => $invitation->job_title,
+            'department_unit' => $invitation->department_unit,
+            'start_date' => $invitation->start_date
         ]);
 
         // Update invitation status

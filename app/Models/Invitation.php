@@ -17,7 +17,13 @@ class Invitation extends Model
         'invited_by',
         'role',
         'expires_at',
-        'status'
+        'status',
+        'first_name',
+        'last_name',
+        'job_title',
+        'department_unit',
+        'start_date',
+
     ];
 
     protected $casts = [

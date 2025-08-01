@@ -17,9 +17,22 @@ return new class extends Migration {
             $table->enum('status', ['pending', 'accepted', 'revoked'])->default('pending');
             $table->timestamps();
 
+            $table->string('first_name');
+            $table->string('last_name');
+            $table->string('department_unit');
+            $table->string('job_title');
+            // add start date
+            $table->date('start_date');
+
+
             $table->foreign('invited_by')->references('id')->on('users')->onDelete('cascade');
             $table->index('token');
             $table->index('email');
+            // add firstname, lastname, department unit, job title
+            $table->index('first_name');
+            $table->index('last_name');
+            $table->index('department_unit');
+            $table->index('job_title');
         });
     }
 
