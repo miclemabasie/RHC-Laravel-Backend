@@ -10,6 +10,8 @@ use App\Http\Controllers\AdminController;
 // Public routes
 Route::post('/book-appointment', [AppointmentController::class, 'bookAppointment']);
 
+Route::post('/bootstrap/admin', [AdminController::class, 'bootstrap']);
+
 // Staff authentication
 Route::post('/staff/login', [AuthController::class, 'login']);
 Route::post('/staff/verify-mfa', [AuthController::class, 'verifyMfa']);
@@ -36,4 +38,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/invitations/send', [InvitationController::class, 'sendInvitation']);
         // Add more admin routes here
     });
+
+
 });

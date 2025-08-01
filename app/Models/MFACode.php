@@ -11,6 +11,8 @@ class MFACode extends Model
 {
     use HasFactory, HasUuids;
 
+    protected $table = 'mfa_codes';
+
     protected $fillable = [
         'user_id',
         'code_hash',

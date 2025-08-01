@@ -57,7 +57,7 @@ class InvitationController extends Controller
 
         return response()->json([
             'message' => 'Invitation sent successfully',
-            'invitation' => $invitation
+            // 'invitation' => $invitation
         ], 201);
     }
 

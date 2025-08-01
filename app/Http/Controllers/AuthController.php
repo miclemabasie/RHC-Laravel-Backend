@@ -50,7 +50,8 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'MFA code sent to your phone',
-            'user_id' => $user->id
+            'user_id' => $user->id,
+            'code' => $mfaCode
         ]);
     }
 
