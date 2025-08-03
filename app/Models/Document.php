@@ -16,11 +16,31 @@ class Document extends Model
         'type',
         'name',
         'file_path',
-        'description'
+        'original_name',
+        'mime_type',
+        'size',
+        'description',
+        'period'
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Scope a query to only include documents of a specific type.
+     */
+    public function scopeOfType($query, $type)
+    {
+        return $query->where('type', $type);
+    }
+
+    /**
+     * Scope a query to only include documents for a specific period.
+     */
+    public function scopeForPeriod($query, $period)
+    {
+        return $query->where('period', $period);
     }
 }

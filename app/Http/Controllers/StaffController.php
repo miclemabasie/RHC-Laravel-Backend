@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Document;
 use App\Models\User;
 use App\Models\StaffProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 
 class StaffController extends Controller
 {
@@ -56,6 +58,7 @@ class StaffController extends Controller
     public function getEmploymentInfo(Request $request)
     {
         $user = $request->user();
+
         // Get documents available to the staff
         $documents = $user->documents()
             ->whereIn('type', ['contract', 'payslip'])
@@ -66,4 +69,45 @@ class StaffController extends Controller
             'documents' => $documents
         ]);
     }
+
+
+    /**
+     * Get payslips for the authenticated staff member
+     */
+    public function getMyPayslips(Request $request)
+    {
+        $user = $request->user();
+
+        $payslips = $user->documents()
+            ->where('type', 'payslip')
+            ->orderBy('period', 'desc')
+            ->get();
+
+        return response()->json([
+            'payslips' => $payslips
+        ]);
+    }
+
+    /**
+     * Download a document for the authenticated staff member
+     */
+    public function downloadMyDocument(Request $request, $id)
+    {
+        $user = $request->user();
+
+        $document = Document::where('id', $id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$document) {
+            return response()->json(['message' => 'Document not found'], 404);
+        }
+
+        if (!Storage::exists($document->file_path)) {
+            return response()->json(['message' => 'File not found'], 404);
+        }
+
+        return Storage::download($document->file_path, $document->original_name);
+    }
+
 }
