@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FeedbackController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AppointmentController;
@@ -58,6 +59,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/invitations/send', [InvitationController::class, 'sendInvitation']);
             // Add more admin routes here
         });
+
+        Route::get('/feedback', [FeedbackController::class, 'index']);
+        Route::post('/feedback', [FeedbackController::class, 'store']);
+        Route::get('/feedback/{id}', [FeedbackController::class, 'show']);
+        Route::put('/feedback/{id}', [FeedbackController::class, 'update']);
+        Route::get('/feedback/stats', [FeedbackController::class, 'stats']);
+        Route::get('/my-feedback', [FeedbackController::class, 'myFeedback']);
 
     });
 });
