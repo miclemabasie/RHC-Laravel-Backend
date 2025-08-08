@@ -19,6 +19,9 @@ Route::post('/bootstrap/admin', [AdminController::class, 'bootstrap']);
 Route::post('/staff/login', [AuthController::class, 'login']);
 Route::post('/staff/verify-mfa', [AuthController::class, 'verifyMfa']);
 
+
+
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Authentication
@@ -35,6 +38,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/appointments', [AppointmentController::class, 'getAppointments']);
     Route::put('/appointments/{id}', [AppointmentController::class, 'updateAppointment']);
 
+
+
     // Admin only routes
     Route::middleware('admin')->group(function () {
         // Staff management
@@ -45,6 +50,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/admin/staff/{id}/deactivate', [AdminController::class, 'deactivateStaff']);
         Route::post('/admin/staff/{id}/activate', [AdminController::class, 'activateStaff']);
         Route::delete('/admin/staff/{id}', [AdminController::class, 'deleteStaff']);
+        Route::get('/feedback', [FeedbackController::class, 'index']);
+        Route::get('/feedback/stats', [FeedbackController::class, 'stats']);
 
         // Document management
         Route::post('/admin/staff/{id}/documents', [DocumentController::class, 'uploadDocument']);
@@ -60,12 +67,14 @@ Route::middleware('auth:sanctum')->group(function () {
             // Add more admin routes here
         });
 
-        Route::get('/feedback', [FeedbackController::class, 'index']);
-        Route::post('/feedback', [FeedbackController::class, 'store']);
-        Route::get('/feedback/{id}', [FeedbackController::class, 'show']);
-        Route::put('/feedback/{id}', [FeedbackController::class, 'update']);
-        Route::get('/feedback/stats', [FeedbackController::class, 'stats']);
-        Route::get('/my-feedback', [FeedbackController::class, 'myFeedback']);
 
     });
+
+    // Feedback routes
+    Route::get('/feedback', [FeedbackController::class, 'index']);
+    Route::post('/feedback', [FeedbackController::class, 'store']);
+    Route::get('/feedback/{id}', [FeedbackController::class, 'show']);
+    Route::put('/feedback/{id}', [FeedbackController::class, 'update']);
+
+    Route::get('/my-feedback', [FeedbackController::class, 'myFeedback']);
 });

@@ -14,7 +14,6 @@ class FeedbackController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-
         // For staff, show only their feedback unless they're admin
         if ($user->role !== 'admin') {
             $query = Feedback::where('user_id', $user->id);
@@ -62,7 +61,7 @@ class FeedbackController extends Controller
         }
 
         $feedback = Feedback::create([
-            'user_id' => $request->user()->id,
+            'user_id' => $request->user_id,
             'type' => $request->type,
             'title' => $request->title,
             'content' => $request->content,
