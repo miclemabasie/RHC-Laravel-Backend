@@ -12,7 +12,89 @@ use Illuminate\Support\Str;
 class DocumentController extends Controller
 {
     /**
-     * Upload a document for a staff member
+     * @OA\Post(
+     *     path="/documents/{userId}/upload",
+     *     summary="Upload a document for a staff member",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="userId",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the staff member",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={"file", "type"},
+     *                 @OA\Property(
+     *                     property="file",
+     *                     type="string",
+     *                     format="binary",
+     *                     description="Document file to upload"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="type",
+     *                     type="string",
+     *                     enum={"contract", "payslip", "other"},
+     *                     description="Type of document"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="description",
+     *                     type="string",
+     *                     maxLength=255,
+     *                     description="Optional description of the document"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="period",
+     *                     type="string",
+     *                     maxLength=7,
+     *                     description="Period for payslips (e.g., 2023-01)"
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Document uploaded successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Document uploaded successfully"),
+     *             @OA\Property(
+     *                 property="document",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="user_id", type="integer", example=1),
+     *                 @OA\Property(property="type", type="string", example="payslip"),
+     *                 @OA\Property(property="name", type="string", example="document"),
+     *                 @OA\Property(property="file_path", type="string", example="documents/payslip/uuid.pdf"),
+     *                 @OA\Property(property="original_name", type="string", example="payslip_november.pdf"),
+     *                 @OA\Property(property="mime_type", type="string", example="application/pdf"),
+     *                 @OA\Property(property="size", type="integer", example=10240),
+     *                 @OA\Property(property="description", type="string", example="November 2023 payslip"),
+     *                 @OA\Property(property="period", type="string", example="2023-11"),
+     *                 @OA\Property(property="created_at", type="string", format="date-time"),
+     *                 @OA\Property(property="updated_at", type="string", format="date-time")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="User not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="errors", type="object", example={"file": {"The file field is required."}})
+     *         )
+     *     )
+     * )
      */
     public function uploadDocument(Request $request, $userId)
     {
@@ -68,7 +150,64 @@ class DocumentController extends Controller
     }
 
     /**
-     * Get all documents for a staff member
+     * @OA\Get(
+     *     path="/documents/{userId}",
+     *     summary="Get all documents for a staff member",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="userId",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the staff member",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="type",
+     *         in="query",
+     *         required=false,
+     *         description="Filter by document type",
+     *         @OA\Schema(type="string", enum={"contract", "payslip", "other"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="period",
+     *         in="query",
+     *         required=false,
+     *         description="Filter by period (for payslips)",
+     *         @OA\Schema(type="string", example="2023-11")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Documents retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="documents",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="user_id", type="integer", example=1),
+     *                     @OA\Property(property="type", type="string", example="payslip"),
+     *                     @OA\Property(property="name", type="string", example="document"),
+     *                     @OA\Property(property="file_path", type="string", example="documents/payslip/uuid.pdf"),
+     *                     @OA\Property(property="original_name", type="string", example="payslip_november.pdf"),
+     *                     @OA\Property(property="mime_type", type="string", example="application/pdf"),
+     *                     @OA\Property(property="size", type="integer", example=10240),
+     *                     @OA\Property(property="description", type="string", example="November 2023 payslip"),
+     *                     @OA\Property(property="period", type="string", example="2023-11"),
+     *                     @OA\Property(property="created_at", type="string", format="date-time"),
+     *                     @OA\Property(property="updated_at", type="string", format="date-time")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="User not found")
+     *         )
+     *     )
+     * )
      */
     public function getDocuments($userId, Request $request)
     {
@@ -98,7 +237,48 @@ class DocumentController extends Controller
     }
 
     /**
-     * Get a specific document
+     * @OA\Get(
+     *     path="/documents/single/{id}",
+     *     summary="Get a specific document",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the document",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Document retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="document",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="user_id", type="integer", example=1),
+     *                 @OA\Property(property="type", type="string", example="payslip"),
+     *                 @OA\Property(property="name", type="string", example="document"),
+     *                 @OA\Property(property="file_path", type="string", example="documents/payslip/uuid.pdf"),
+     *                 @OA\Property(property="original_name", type="string", example="payslip_november.pdf"),
+     *                 @OA\Property(property="mime_type", type="string", example="application/pdf"),
+     *                 @OA\Property(property="size", type="integer", example=10240),
+     *                 @OA\Property(property="description", type="string", example="November 2023 payslip"),
+     *                 @OA\Property(property="period", type="string", example="2023-11"),
+     *                 @OA\Property(property="created_at", type="string", format="date-time"),
+     *                 @OA\Property(property="updated_at", type="string", format="date-time")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Document not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Document not found")
+     *         )
+     *     )
+     * )
      */
     public function getDocument($id)
     {
@@ -114,7 +294,31 @@ class DocumentController extends Controller
     }
 
     /**
-     * Download a document
+     * @OA\Get(
+     *     path="/documents/{id}/download",
+     *     summary="Download a document",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the document",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Document downloaded successfully",
+     *         @OA\MediaType(mediaType="application/octet-stream")
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Document not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Document not found")
+     *         )
+     *     )
+     * )
      */
     public function downloadDocument($id)
     {
@@ -132,7 +336,33 @@ class DocumentController extends Controller
     }
 
     /**
-     * Delete a document
+     * @OA\Delete(
+     *     path="/documents/{id}",
+     *     summary="Delete a document",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the document",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Document deleted successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Document deleted successfully")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Document not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Document not found")
+     *         )
+     *     )
+     * )
      */
     public function deleteDocument($id)
     {
@@ -156,7 +386,57 @@ class DocumentController extends Controller
     }
 
     /**
-     * Get all payslips for a staff member
+     * @OA\Get(
+     *     path="/documents/{userId}/payslips",
+     *     summary="Get all payslips for a staff member",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="userId",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the staff member",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="period",
+     *         in="query",
+     *         required=false,
+     *         description="Filter by period",
+     *         @OA\Schema(type="string", example="2023-11")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Payslips retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="payslips",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="user_id", type="integer", example=1),
+     *                     @OA\Property(property="type", type="string", example="payslip"),
+     *                     @OA\Property(property="name", type="string", example="document"),
+     *                     @OA\Property(property="file_path", type="string", example="documents/payslip/uuid.pdf"),
+     *                     @OA\Property(property="original_name", type="string", example="payslip_november.pdf"),
+     *                     @OA\Property(property="mime_type", type="string", example="application/pdf"),
+     *                     @OA\Property(property="size", type="integer", example=10240),
+     *                     @OA\Property(property="description", type="string", example="November 2023 payslip"),
+     *                     @OA\Property(property="period", type="string", example="2023-11"),
+     *                     @OA\Property(property="created_at", type="string", format="date-time"),
+     *                     @OA\Property(property="updated_at", type="string", format="date-time")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="User not found")
+     *         )
+     *     )
+     * )
      */
     public function getPayslips($userId, Request $request)
     {
@@ -181,7 +461,82 @@ class DocumentController extends Controller
     }
 
     /**
-     * Update a document
+     * @OA\Put(
+     *     path="/documents/{id}",
+     *     summary="Update a document",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the document",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="application/json",
+     *             @OA\Schema(
+     *                 @OA\Property(
+     *                     property="name",
+     *                     type="string",
+     *                     maxLength=255,
+     *                     description="Name of the document"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="description",
+     *                     type="string",
+     *                     maxLength=255,
+     *                     description="Description of the document"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="period",
+     *                     type="string",
+     *                     maxLength=7,
+     *                     description="Period for payslips (e.g., 2023-01)"
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Document updated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Document updated successfully"),
+     *             @OA\Property(
+     *                 property="document",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="user_id", type="integer", example=1),
+     *                 @OA\Property(property="type", type="string", example="payslip"),
+     *                 @OA\Property(property="name", type="string", example="updated_document_name"),
+     *                 @OA\Property(property="file_path", type="string", example="documents/payslip/uuid.pdf"),
+     *                 @OA\Property(property="original_name", type="string", example="payslip_november.pdf"),
+     *                 @OA\Property(property="mime_type", type="string", example="application/pdf"),
+     *                 @OA\Property(property="size", type="integer", example=10240),
+     *                 @OA\Property(property="description", type="string", example="Updated description"),
+     *                 @OA\Property(property="period", type="string", example="2023-11"),
+     *                 @OA\Property(property="created_at", type="string", format="date-time"),
+     *                 @OA\Property(property="updated_at", type="string", format="date-time")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Document not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Document not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="errors", type="object", example={"name": {"The name field is required."}})
+     *         )
+     *     )
+     * )
      */
     public function updateDocument(Request $request, $id)
     {

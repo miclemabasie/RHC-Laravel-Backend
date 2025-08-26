@@ -12,6 +12,8 @@ class AdminController extends Controller
     /**
      * Bootstrap the very first admin account.
      */
+
+
     public function bootstrap(Request $request)
     {
         // Check secret key

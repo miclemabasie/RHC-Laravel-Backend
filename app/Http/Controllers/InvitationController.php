@@ -12,6 +12,39 @@ use Illuminate\Support\Facades\Hash;
 
 class InvitationController extends Controller
 {
+
+    /**
+     * @OA\Post(
+     *     path="/admin/staff/invite",
+     *     summary="Invite new staff",
+     *     tags={"Admin"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="application/json",
+     *             @OA\Schema(
+     *                 required={"email", "role"},
+     *                 @OA\Property(property="email", type="string", format="email", example="newstaff@example.com"),
+     *                 @OA\Property(property="role", type="string", enum={"admin", "staff"}, example="staff"),
+     *                 @OA\Property(property="name", type="string", example="New Staff Member")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Staff invited",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Invitation sent successfully")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Unauthorized"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
+
+
     public function sendInvitation(Request $request)
     {
         // Only admin can send invitations
@@ -66,6 +99,70 @@ class InvitationController extends Controller
             // 'invitation' => $invitation
         ], 201);
     }
+
+    /**
+     * @OA\Post(
+     *     path="/invitation/accept/{token}",
+     *     summary="Accept staff invitation",
+     *     tags={"Invitations"},
+     *     @OA\Parameter(
+     *         name="token",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string"),
+     *         description="Invitation token"
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="application/json",
+     *             @OA\Schema(
+     *                 required={"password", "password_confirmation"},
+     *                 @OA\Property(property="password", type="string", format="password", example="secret123"),
+     *                 @OA\Property(property="password_confirmation", type="string", format="password", example="secret123")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Invitation accepted",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Invitation accepted successfully")
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Invalid token"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
+
+    /**
+     * @OA\Post(
+     *     path="/bootstrap/admin",
+     *     summary="Bootstrap first admin",
+     *     tags={"Admin"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="application/json",
+     *             @OA\Schema(
+     *                 required={"name", "email", "password", "password_confirmation"},
+     *                 @OA\Property(property="name", type="string", example="Admin User"),
+     *                 @OA\Property(property="email", type="string", format="email", example="admin@example.com"),
+     *                 @OA\Property(property="password", type="string", format="password", example="secret123"),
+     *                 @OA\Property(property="password_confirmation", type="string", format="password", example="secret123")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Admin created successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Admin created successfully")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
 
     public function acceptInvitation(Request $request, $token)
     {

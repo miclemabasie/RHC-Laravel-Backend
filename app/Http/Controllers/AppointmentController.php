@@ -10,6 +10,46 @@ use Illuminate\Support\Str;
 
 class AppointmentController extends Controller
 {
+    /**
+     * @OA\Post(
+     *     path="/book-appointment",
+     *     summary="Book a new appointment",
+     *     tags={"Appointments"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="application/json",
+     *             @OA\Schema(
+     *                 required={"name", "phone", "unit_service", "datetime", "type"},
+     *                 @OA\Property(property="name", type="string", example="John Doe"),
+     *                 @OA\Property(property="phone", type="string", example="+1234567890"),
+     *                 @OA\Property(property="email", type="string", format="email", example="john@example.com"),
+     *                 @OA\Property(property="dob", type="string", format="date", example="1990-01-01"),
+     *                 @OA\Property(property="unit_service", type="string", example="General Checkup"),
+     *                 @OA\Property(property="datetime", type="string", format="date-time", example="2023-12-01 10:00:00"),
+     *                 @OA\Property(property="type", type="string", enum={"in_person", "online", "follow_up"}, example="in_person"),
+     *                 @OA\Property(property="notes", type="string", example="Additional notes about the appointment")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Appointment booked successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Appointment booked successfully"),
+     *             @OA\Property(property="confirmation_code", type="string", example="RHC-20231201-ABC123"),
+     *             @OA\Property(property="appointment_id", type="integer", example=1)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="errors", type="object", example={"name": {"The name field is required."}})
+     *         )
+     *     )
+     * )
+     */
     public function bookAppointment(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -61,6 +101,108 @@ class AppointmentController extends Controller
         ], 201);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/appointments",
+     *     summary="Get all appointments (admin/staff only)",
+     *     tags={"Appointments"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="query",
+     *         required=false,
+     *         description="Filter by status",
+     *         @OA\Schema(type="string", enum={"pending", "confirmed", "cancelled", "completed"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="date",
+     *         in="query",
+     *         required=false,
+     *         description="Filter by date (YYYY-MM-DD)",
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="unit_service",
+     *         in="query",
+     *         required=false,
+     *         description="Filter by unit service",
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         required=false,
+     *         description="Search by confirmation code or patient details",
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         required=false,
+     *         description="Page number for pagination",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Appointments retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="current_page", type="integer", example=1),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="patient_id", type="integer", example=1),
+     *                     @OA\Property(property="unit_service", type="string", example="General Checkup"),
+     *                     @OA\Property(property="datetime", type="string", format="date-time"),
+     *                     @OA\Property(property="type", type="string", example="in_person"),
+     *                     @OA\Property(property="notes", type="string", example="Additional notes"),
+     *                     @OA\Property(property="confirmation_code", type="string", example="RHC-20231201-ABC123"),
+     *                     @OA\Property(property="status", type="string", example="pending"),
+     *                     @OA\Property(property="created_at", type="string", format="date-time"),
+     *                     @OA\Property(property="updated_at", type="string", format="date-time"),
+     *                     @OA\Property(
+     *                         property="patient",
+     *                         type="object",
+     *                         @OA\Property(property="id", type="integer", example=1),
+     *                         @OA\Property(property="name", type="string", example="John Doe"),
+     *                         @OA\Property(property="phone", type="string", example="+1234567890"),
+     *                         @OA\Property(property="email", type="string", format="email", example="john@example.com"),
+     *                         @OA\Property(property="dob", type="string", format="date", example="1990-01-01")
+     *                     )
+     *                 )
+     *             ),
+     *             @OA\Property(property="first_page_url", type="string", example="http://example.com/appointments?page=1"),
+     *             @OA\Property(property="from", type="integer", example=1),
+     *             @OA\Property(property="last_page", type="integer", example=1),
+     *             @OA\Property(property="last_page_url", type="string", example="http://example.com/appointments?page=1"),
+     *             @OA\Property(
+     *                 property="links",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     type="object",
+     *                     @OA\Property(property="url", type="string", nullable=true, example="http://example.com/appointments?page=1"),
+     *                     @OA\Property(property="label", type="string", example="1"),
+     *                     @OA\Property(property="active", type="boolean", example=true)
+     *                 )
+     *             ),
+     *             @OA\Property(property="next_page_url", type="string", nullable=true, example=null),
+     *             @OA\Property(property="path", type="string", example="http://example.com/appointments"),
+     *             @OA\Property(property="per_page", type="integer", example=20),
+     *             @OA\Property(property="prev_page_url", type="string", nullable=true, example=null),
+     *             @OA\Property(property="to", type="integer", example=10),
+     *             @OA\Property(property="total", type="integer", example=10)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     )
+     * )
+     */
     public function getAppointments(Request $request)
     {
         // Only accessible to admin/staff
@@ -100,6 +242,83 @@ class AppointmentController extends Controller
         return response()->json($appointments);
     }
 
+    /**
+     * @OA\Put(
+     *     path="/appointments/{id}",
+     *     summary="Update an appointment (admin only)",
+     *     tags={"Appointments"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="Appointment ID",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="application/json",
+     *             @OA\Schema(
+     *                 @OA\Property(property="status", type="string", enum={"pending", "confirmed", "cancelled", "completed"}),
+     *                 @OA\Property(property="datetime", type="string", format="date-time", example="2023-12-01 10:00:00"),
+     *                 @OA\Property(property="notes", type="string", example="Updated notes")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Appointment updated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Appointment updated successfully"),
+     *             @OA\Property(
+     *                 property="appointment",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="patient_id", type="integer", example=1),
+     *                 @OA\Property(property="unit_service", type="string", example="General Checkup"),
+     *                 @OA\Property(property="datetime", type="string", format="date-time"),
+     *                 @OA\Property(property="type", type="string", example="in_person"),
+     *                 @OA\Property(property="notes", type="string", example="Updated notes"),
+     *                 @OA\Property(property="confirmation_code", type="string", example="RHC-20231201-ABC123"),
+     *                 @OA\Property(property="status", type="string", example="confirmed"),
+     *                 @OA\Property(property="created_at", type="string", format="date-time"),
+     *                 @OA\Property(property="updated_at", type="string", format="date-time"),
+     *                 @OA\Property(
+     *                     property="patient",
+     *                     type="object",
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="name", type="string", example="John Doe"),
+     *                     @OA\Property(property="phone", type="string", example="+1234567890"),
+     *                     @OA\Property(property="email", type="string", format="email", example="john@example.com"),
+     *                     @OA\Property(property="dob", type="string", format="date", example="1990-01-01")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Unauthorized")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Appointment not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Appointment not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="errors", type="object", example={"status": {"The selected status is invalid."}})
+     *         )
+     *     )
+     * )
+     */
     public function updateAppointment(Request $request, $id)
     {
         // Only accessible to admin

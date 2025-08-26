@@ -9,6 +9,28 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DocumentController;
 
+
+/**
+ * @OA\Info(
+ *     version="1.0.0",
+ *     title="RHC Backend API",
+ *     description="API documentation for RHC backend"
+ * )
+ *
+ * @OA\Server(
+ *     url="http://localhost:8000/api",
+ *     description="Local Development Server"
+ * )
+ *
+ * @OA\SecurityScheme(
+ *     securityScheme="bearerAuth",
+ *     type="http",
+ *     scheme="bearer",
+ *     bearerFormat="JWT"
+ * )
+ */
+
+
 // Public routes
 Route::post('/book-appointment', [AppointmentController::class, 'bookAppointment']);
 Route::post('/invitation/accept/{token}', [InvitationController::class, 'acceptInvitation']);
@@ -78,3 +100,4 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/my-feedback', [FeedbackController::class, 'myFeedback']);
 });
+

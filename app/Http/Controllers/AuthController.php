@@ -12,6 +12,54 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    /**
+     * @OA\Post(
+     *     path="/staff/login",
+     *     summary="Staff login with email and password",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="application/json",
+     *             @OA\Schema(
+     *                 required={"email", "password"},
+     *                 @OA\Property(property="email", type="string", format="email", example="staff@example.com"),
+     *                 @OA\Property(property="password", type="string", format="password", example="password123")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="MFA code sent successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="MFA code sent to your phone"),
+     *             @OA\Property(property="user_id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *             @OA\Property(property="code", type="string", example="ABC123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Invalid credentials",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Invalid credentials")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Account is inactive",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Account is inactive")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="errors", type="object", example={"email": {"The email field is required."}})
+     *         )
+     *     )
+     * )
+     */
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -55,6 +103,70 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/staff/verify-mfa",
+     *     summary="Verify MFA code for login",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="application/json",
+     *             @OA\Schema(
+     *                 required={"user_id", "code"},
+     *                 @OA\Property(property="user_id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="code", type="string", example="ABC123")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Login successful",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Login successful"),
+     *             @OA\Property(property="token", type="string", example="eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."),
+     *             @OA\Property(
+     *                 property="user",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="email", type="string", format="email", example="staff@example.com"),
+     *                 @OA\Property(property="name", type="string", example="John Doe"),
+     *                 @OA\Property(property="status", type="string", example="active"),
+     *                 @OA\Property(
+     *                     property="staff_profile",
+     *                     type="object",
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="first_name", type="string", example="John"),
+     *                     @OA\Property(property="last_name", type="string", example="Doe"),
+     *                     @OA\Property(property="job_title", type="string", example="Developer"),
+     *                     @OA\Property(property="department_unit", type="string", example="IT")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Invalid MFA code",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Invalid MFA code")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="User not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="errors", type="object", example={"user_id": {"The user_id field is required."}})
+     *         )
+     *     )
+     * )
+     */
     public function verifyMfa(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -78,7 +190,9 @@ class AuthController extends Controller
             ->first();
 
         if (!$mfaCode || !Hash::check($request->code, $mfaCode->code_hash)) {
-            $mfaCode->increment('attempts');
+            if ($mfaCode) {
+                $mfaCode->increment('attempts');
+            }
             return response()->json(['message' => 'Invalid MFA code'], 401);
         }
 
@@ -95,9 +209,9 @@ class AuthController extends Controller
         ]);
     }
 
-    // public function logout(Request $request)
-    // {
-    //     $request->user()->currentAccessToken()->delete();
-    //     return response()->json(['message' => 'Logged out successfully']);
-    // }
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+        return response()->json(['message' => 'Logged out successfully']);
+    }
 }
