@@ -4,12 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class MFACode extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory;
+
+    protected $keyType = 'string';
+    public $incrementing = false;
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->{$model->getKeyName()})) {
+                $model->{$model->getKeyName()} = Str::uuid()->toString();
+            }
+        });
+    }
 
     protected $table = 'mfa_codes';
 
@@ -23,10 +36,10 @@ class MFACode extends Model
 
     protected $casts = [
         'expires_at' => 'datetime',
-        'used' => 'boolean',
+        'used' => 'boolean'
     ];
 
-    public function user(): BelongsTo
+    public function user()
     {
         return $this->belongsTo(User::class);
     }

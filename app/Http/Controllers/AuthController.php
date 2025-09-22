@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -34,7 +35,7 @@ class AuthController extends Controller
      *         @OA\JsonContent(
      *             @OA\Property(property="message", type="string", example="MFA code sent to your phone"),
      *             @OA\Property(property="user_id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
-     *             @OA\Property(property="code", type="string", example="ABC123")
+     *             @OA\Property(property="code", type="string", example="123456")
      *         )
      *     ),
      *     @OA\Response(
@@ -62,6 +63,7 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
+        Log::info('Login request received');
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required'
@@ -81,9 +83,16 @@ class AuthController extends Controller
             return response()->json(['message' => 'Account is inactive'], 403);
         }
 
-        // Generate MFA code
-        $mfaCode = Str::random(6);
+        // Generate 6-digit MFA code
+        $mfaCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
         $hashedCode = Hash::make($mfaCode);
+
+        $id = Str::uuid();
+        Log::info('MFA code generated', [
+            'id' => $id,
+            'user_id' => $user->id,
+            'code' => $mfaCode
+        ]);
 
         // Store MFA code
         MFACode::create([
@@ -95,6 +104,10 @@ class AuthController extends Controller
 
         // Send MFA code via SMS (implementation depends on your SMS provider)
         // $this->sendSMS($user->phone, "Your MFA code is: $mfaCode");
+        Log::info('MFA code sent to user', [
+            'user_id' => $user->id,
+            'code' => $mfaCode
+        ]);
 
         return response()->json([
             'message' => 'MFA code sent to your phone',
@@ -115,7 +128,7 @@ class AuthController extends Controller
      *             @OA\Schema(
      *                 required={"user_id", "code"},
      *                 @OA\Property(property="user_id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
-     *                 @OA\Property(property="code", type="string", example="ABC123")
+     *                 @OA\Property(property="code", type="string", example="123456")
      *             )
      *         )
      *     ),
@@ -171,7 +184,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|uuid',
-            'code' => 'required|string|size:6'
+            'code' => 'required|digits:6'
         ]);
 
         if ($validator->fails()) {

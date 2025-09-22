@@ -15,6 +15,8 @@ return new class extends Migration {
             $table->date('start_date');
             $table->string('job_title');
             $table->string('department_unit');
+            // add the user is active colume
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

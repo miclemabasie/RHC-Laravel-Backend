@@ -6,6 +6,7 @@ use App\Models\Invitation;
 use App\Models\User;
 use App\Models\StaffProfile;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
@@ -47,9 +48,17 @@ class InvitationController extends Controller
 
     public function sendInvitation(Request $request)
     {
+        Log::info("Sending invitation..");
         // Only admin can send invitations
         if ($request->user()->role !== 'admin') {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        Log::info("Request Data");
+
+        // log all the request data
+        foreach ($request->all() as $key => $value) {
+            Log::info($key . ': ' . $value);
         }
 
         $validator = Validator::make($request->all(), [
@@ -57,15 +66,26 @@ class InvitationController extends Controller
             'role' => 'required|in:staff,admin,hr,payroll',
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'job_title' => 'required|string|max:255',
-            'department_unit' => 'required|string|max:255',
-            'start_date' => 'required|date'
+            // 'job_title' => 'required|string|max:255',
+            'department' => 'required|string|max:255',
+            // 'start_date' => 'date'
         ]);
 
+        $job_title = "Staff";
+
+
+
+
         if ($validator->fails()) {
+            Log::info("Invitation has been !validated");
+            // log all the error messages
+            for ($i = 0; $i < count($validator->errors()); $i++) {
+                Log::info($validator->errors()->all()[$i]);
+            }
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        Log::info("Invitation has been validated");
         // Check if invitation already exists
         $existingInvitation = Invitation::where('email', $request->email)
             ->where('status', 'pending')
@@ -75,6 +95,8 @@ class InvitationController extends Controller
             return response()->json(['message' => 'Invitation already sent to this email'], 409);
         }
 
+        // custom startdate
+        $startDate = date('Y-m-d', strtotime($request->start_date));
         // Create invitation
         $token = Str::random(60);
         $invitation = Invitation::create([
@@ -85,13 +107,20 @@ class InvitationController extends Controller
             'expires_at' => now()->addDays(7),
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
-            'job_title' => $request->job_title,
-            'department_unit' => $request->department_unit,
-            'start_date' => $request->start_date,
+            'job_title' => $job_title,
+            // 'job_title' => $request->job_title,
+            'department_unit' => $request->department,
+            'start_date' => $startDate
         ]);
 
         // Send invitation email (implement your email service)
         // $this->sendInvitationEmail($request->email, $token);
+
+
+        // Log the returnd information to the log file
+        Log::info("Invitation has been sent");
+        Log::info("This is the token: " . $token);
+
 
         return response()->json([
             'message' => 'Invitation sent successfully',
