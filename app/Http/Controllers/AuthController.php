@@ -10,9 +10,43 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Twilio\Rest\Client;
+use Exception;
 
 class AuthController extends Controller
 {
+    private function sendSMS($phoneNumber, $message)
+    {
+        try {
+            $sid = config('services.twilio.sid');
+            $token = config('services.twilio.auth_token');
+            $from = config('services.twilio.phone_number');
+
+            $twilio = new Client($sid, $token);
+
+            $message = $twilio->messages->create(
+                $phoneNumber,
+                [
+                    'from' => $from,
+                    'body' => $message
+                ]
+            );
+
+            Log::info('SMS sent successfully', [
+                'to' => $phoneNumber,
+                'message_sid' => $message->sid
+            ]);
+
+            return true;
+        } catch (Exception $e) {
+            Log::error('Failed to send SMS', [
+                'to' => $phoneNumber,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
     /**
      * @OA\Post(
      *     path="/staff/login",
@@ -34,8 +68,7 @@ class AuthController extends Controller
      *         description="MFA code sent successfully",
      *         @OA\JsonContent(
      *             @OA\Property(property="message", type="string", example="MFA code sent to your phone"),
-     *             @OA\Property(property="user_id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
-     *             @OA\Property(property="code", type="string", example="123456")
+     *             @OA\Property(property="user_id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000")
      *         )
      *     ),
      *     @OA\Response(
@@ -57,6 +90,13 @@ class AuthController extends Controller
      *         description="Validation error",
      *         @OA\JsonContent(
      *             @OA\Property(property="errors", type="object", example={"email": {"The email field is required."}})
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Failed to send SMS",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Failed to send MFA code. Please try again.")
      *         )
      *     )
      * )
@@ -83,6 +123,12 @@ class AuthController extends Controller
             return response()->json(['message' => 'Account is inactive'], 403);
         }
 
+        // Check if user has a phone number
+        if (!$user->phone) {
+            Log::error('User does not have a phone number', ['user_id' => $user->id]);
+            return response()->json(['message' => 'Phone number not found for this account'], 400);
+        }
+
         // Generate 6-digit MFA code
         $mfaCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
         $hashedCode = Hash::make($mfaCode);
@@ -96,22 +142,31 @@ class AuthController extends Controller
 
         // Store MFA code
         MFACode::create([
+            'id' => $id,
             'user_id' => $user->id,
             'code_hash' => $hashedCode,
             'expires_at' => now()->addMinutes(10),
             'used' => false
         ]);
 
-        // Send MFA code via SMS (implementation depends on your SMS provider)
-        // $this->sendSMS($user->phone, "Your MFA code is: $mfaCode");
+        // Send SMS via Twilio
+        // $smsMessage = "Your MFA code is: $mfaCode. This code will expire in 10 minutes.";
+        // $smsSent = $this->sendSMS($user->phone, $smsMessage);
+
+        // if (!$smsSent) {
+        //     return response()->json(['message' => 'Failed to send MFA code. Please try again.'], 500);
+        // }
+
         Log::info('MFA code sent to user', [
             'user_id' => $user->id,
+            'phone' => $user->phone,
             'code' => $mfaCode
         ]);
 
         return response()->json([
             'message' => 'MFA code sent to your phone',
             'user_id' => $user->id,
+            // Removed the code from response for security
             'code' => $mfaCode
         ]);
     }
@@ -218,6 +273,7 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Login successful',
             'token' => $token,
+            'user_id' => $user->id,
             'user' => $user->load('staffProfile')
         ]);
     }

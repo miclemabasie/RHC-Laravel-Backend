@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class DocumentController extends Controller
 {
@@ -103,12 +104,16 @@ class DocumentController extends Controller
             'file' => 'required|file|max:10240', // 10MB max
             'type' => 'required|in:contract,payslip,other',
             'description' => 'nullable|string|max:255',
-            'period' => 'nullable|string|max:7' // For payslips (e.g., 2023-01)
+            'period' => 'nullable|string|max:10' // For payslips (e.g., 2023-01)
         ]);
 
         if ($validator->fails()) {
+            // log all the errors
+            Log::error('Document upload validation failed', ['errors' => $validator->errors()->all()]);
             return response()->json(['errors' => $validator->errors()], 422);
         }
+
+
 
         // Check if user exists
         $user = User::find($userId);
@@ -129,6 +134,13 @@ class DocumentController extends Controller
 
         // Store file
         Storage::put($path, file_get_contents($file));
+
+        Log::info("Document uploaded", [
+            'original_name' => $file->getClientOriginalName(),
+            'path' => $path,
+            'type' => $request->type,
+            'size' => $file->getSize(),
+        ]);
 
         // Create document record
         $document = Document::create([
@@ -212,6 +224,7 @@ class DocumentController extends Controller
     public function getDocuments($userId, Request $request)
     {
         // Check if user exists
+        Log::info("Getting documents for user", ['user_id' => $userId]);
         $user = User::find($userId);
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
