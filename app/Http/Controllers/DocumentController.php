@@ -9,9 +9,43 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Twilio\Rest\Client;
+use Exception;
 
 class DocumentController extends Controller
 {
+
+    private function sendSMS($phoneNumber, $message)
+    {
+        try {
+            $sid = config('services.twilio.sid');
+            $token = config('services.twilio.auth_token');
+            $from = config('services.twilio.phone_number');
+
+            $twilio = new Client($sid, $token);
+
+            $message = $twilio->messages->create(
+                $phoneNumber,
+                [
+                    'from' => $from,
+                    'body' => $message
+                ]
+            );
+
+            Log::info('SMS sent successfully', [
+                'to' => $phoneNumber,
+                'message_sid' => $message->sid
+            ]);
+
+            return true;
+        } catch (Exception $e) {
+            Log::error('Failed to send SMS', [
+                'to' => $phoneNumber,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
     /**
      * @OA\Post(
      *     path="/documents/{userId}/upload",
@@ -113,8 +147,6 @@ class DocumentController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-
-
         // Check if user exists
         $user = User::find($userId);
         if (!$user) {
@@ -155,12 +187,44 @@ class DocumentController extends Controller
             'period' => $request->period
         ]);
 
+
+        if ($user->phone) {
+            $message = "📄 New Document Uploaded\n";
+            $message .= "Type: " . ucfirst($request->type) . "\n";
+            if ($request->description) {
+                $message .= "Description: " . $request->description . "\n";
+            }
+            if ($request->period) {
+                $message .= "Period: " . $request->period . "\n";
+            }
+            $message .= "You can view it in your documents section.";
+
+            $smsSent = $this->sendSMS($user->phone, $message);
+
+            if ($smsSent) {
+                Log::info('Document upload SMS sent successfully', [
+                    'user_id' => $user->id,
+                    'phone' => $user->phone,
+                    'document_type' => $request->type
+                ]);
+            } else {
+                Log::error('Failed to send document upload SMS', [
+                    'user_id' => $user->id,
+                    'phone' => $user->phone
+                ]);
+            }
+        } else {
+            Log::warning('Cannot send SMS: User has no phone number', [
+                'user_id' => $user->id,
+                'email' => $user->email
+            ]);
+        }
+
         return response()->json([
             'message' => 'Document uploaded successfully',
             'document' => $document
         ], 201);
     }
-
     /**
      * @OA\Get(
      *     path="/documents/{userId}",

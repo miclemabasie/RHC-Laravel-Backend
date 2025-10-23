@@ -18,6 +18,7 @@ class Invitation extends Model
         'role',
         'expires_at',
         'status',
+        'phone',
         'first_name',
         'last_name',
         'job_title',

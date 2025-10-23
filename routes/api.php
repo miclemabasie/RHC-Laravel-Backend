@@ -34,6 +34,8 @@ use App\Http\Controllers\DocumentController;
 // Public routes
 Route::post('/book-appointment', [AppointmentController::class, 'bookAppointment']);
 Route::post('/invitation/accept/{token}', [InvitationController::class, 'acceptInvitation']);
+// contact route
+Route::post('/contact', [AuthController::class, 'contact']);
 
 Route::post('/bootstrap/admin', [AdminController::class, 'bootstrap']);
 
@@ -48,10 +50,11 @@ Route::post('/staff/verify-mfa', [AuthController::class, 'verifyMfa']);
 Route::middleware('auth:sanctum')->group(function () {
     // Authentication
     Route::post('/logout', [AuthController::class, 'logout']);
-
+    // Get stats from the server
+    Route::get('/admin/dashboard/stats', [AdminController::class, 'getDashboardStats']);
     // Staff routes
     Route::get('/staff/me', [StaffController::class, 'getProfile']);
-    Route::put('/staff/me', [StaffController::class, 'updateProfile']);
+    Route::post('/staff/me', [StaffController::class, 'updateProfile']);
     Route::get('/staff/me/employment-info', [StaffController::class, 'getEmploymentInfo']);
     Route::get('/staff/me/payslips', [StaffController::class, 'getMyPayslips']);
     Route::get('/staff/me/documents/{id}/download', [StaffController::class, 'downloadMyDocument']);
@@ -68,7 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/staff', [AdminController::class, 'getAllStaff']);
         Route::get('/admin/staff/{id}', [AdminController::class, 'getStaff']);
         Route::post('/admin/staff/invite', [AdminController::class, 'inviteStaff']);
-        Route::put('/admin/staff/{id}', [AdminController::class, 'updateStaff']);
+        Route::post('/admin/staff/{id}', [AdminController::class, 'updateStaff']);
         Route::post('/admin/staff/{id}/deactivate', [AdminController::class, 'deactivateStaff']);
         Route::post('/admin/staff/{id}/activate', [AdminController::class, 'activateStaff']);
         Route::delete('/admin/staff/{id}', [AdminController::class, 'deleteStaff']);

@@ -7,12 +7,46 @@ use App\Models\User;
 use App\Models\StaffProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Twilio\Rest\Client;
+use Exception;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 
 class InvitationController extends Controller
 {
+
+    private function sendSMS($phoneNumber, $message)
+    {
+        try {
+            $sid = config('services.twilio.sid');
+            $token = config('services.twilio.auth_token');
+            $from = config('services.twilio.phone_number');
+
+            $twilio = new Client($sid, $token);
+
+            $message = $twilio->messages->create(
+                $phoneNumber,
+                [
+                    'from' => $from,
+                    'body' => $message
+                ]
+            );
+
+            Log::info('SMS sent successfully', [
+                'to' => $phoneNumber,
+                'message_sid' => $message->sid
+            ]);
+
+            return true;
+        } catch (Exception $e) {
+            Log::error('Failed to send SMS', [
+                'to' => $phoneNumber,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
 
     /**
      * @OA\Post(
@@ -63,18 +97,14 @@ class InvitationController extends Controller
 
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|unique:users,email',
+            'phone' => 'required|string|max:20',
             'role' => 'required|in:staff,admin,hr,payroll',
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            // 'job_title' => 'required|string|max:255',
             'department' => 'required|string|max:255',
-            // 'start_date' => 'date'
         ]);
 
         $job_title = "Staff";
-
-
-
 
         if ($validator->fails()) {
             Log::info("Invitation has been !validated");
@@ -86,6 +116,7 @@ class InvitationController extends Controller
         }
 
         Log::info("Invitation has been validated");
+
         // Check if invitation already exists
         $existingInvitation = Invitation::where('email', $request->email)
             ->where('status', 'pending')
@@ -108,24 +139,55 @@ class InvitationController extends Controller
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'job_title' => $job_title,
-            // 'job_title' => $request->job_title,
             'department_unit' => $request->department,
             'start_date' => $startDate
         ]);
 
         // Send invitation email (implement your email service)
-        // $this->sendInvitationEmail($request->email, $token);
+        // $this->sendInvitationEmail($invitation);
 
+        // SEND SMS TO THE USER WITH INVITATION LINK
+        try {
+            $invitationLink = config('app.frontend_url') . "/accept-invitation/" . $token;
 
-        // Log the returnd information to the log file
+            $smsMessage = "🎉 Welcome to RHC Platform!\n";
+            $smsMessage .= "Hello {$request->first_name},\n";
+            $smsMessage .= "You have been invited to join RHC as {$request->role}.\n";
+            $smsMessage .= "Click here to accept: {$invitationLink}\n";
+            $smsMessage .= "This link expires in 7 days.\n";
+            $smsMessage .= "Welcome aboard! 🏥";
+
+            $smsSent = $this->sendSMS($request->phone, $smsMessage);
+
+            if (!$smsSent) {
+                Log::error('Failed to send invitation SMS', [
+                    'phone' => $request->phone,
+                    'email' => $request->email
+                ]);
+                // Don't fail the entire request if SMS fails, but log it
+            } else {
+                Log::info('Invitation SMS sent successfully', [
+                    'phone' => $request->phone,
+                    'email' => $request->email
+                ]);
+            }
+
+        } catch (Exception $e) {
+            Log::error('Error sending invitation SMS', [
+                'error' => $e->getMessage(),
+                'phone' => $request->phone,
+                'email' => $request->email
+            ]);
+            // Continue even if SMS fails
+        }
+
+        // Log the returned information to the log file
         Log::info("Invitation has been sent");
         Log::info("This is the token: " . $token);
-
 
         return response()->json([
             'message' => 'Invitation sent successfully',
             'token' => $token
-            // 'invitation' => $invitation
         ], 201);
     }
 
@@ -238,4 +300,5 @@ class InvitationController extends Controller
             'user_id' => $user->id
         ], 201);
     }
+
 }

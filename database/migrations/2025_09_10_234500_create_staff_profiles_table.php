@@ -10,11 +10,11 @@ return new class extends Migration {
         Schema::create('staff_profiles', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('user_id');
-            $table->string('first_name');
-            $table->string('last_name');
-            $table->date('start_date');
-            $table->string('job_title');
-            $table->string('department_unit');
+            $table->string('first_name')->nullable();
+            $table->string('last_name')->nullable();
+            $table->date('start_date')->nullable();
+            $table->string('job_title')->nullable();
+            $table->string('department_unit')->nullable();
             // add the user is active colume
             $table->boolean('is_active')->default(true);
             $table->timestamps();

@@ -60,8 +60,7 @@ return [
     'asset_url' => env('ASSET_URL'),
 
     'admin_bootstrap_key' => env('ADMIN_BOOTSTRAP_KEY', null),
-
-
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

@@ -7,9 +7,44 @@ use App\Models\Patient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
+use Twilio\Rest\Client;
+use Exception;
 
 class AppointmentController extends Controller
 {
+
+    private function sendSMS($phoneNumber, $message)
+    {
+        try {
+            $sid = config('services.twilio.sid');
+            $token = config('services.twilio.auth_token');
+            $from = config('services.twilio.phone_number');
+
+            $twilio = new Client($sid, $token);
+
+            $message = $twilio->messages->create(
+                $phoneNumber,
+                [
+                    'from' => $from,
+                    'body' => $message
+                ]
+            );
+
+            Log::info('SMS sent successfully', [
+                'to' => $phoneNumber,
+                'message_sid' => $message->sid
+            ]);
+
+            return true;
+        } catch (Exception $e) {
+            Log::error('Failed to send SMS', [
+                'to' => $phoneNumber,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
     /**
      * @OA\Post(
      *     path="/book-appointment",
@@ -91,16 +126,41 @@ class AppointmentController extends Controller
             'status' => 'pending'
         ]);
 
-        // Send confirmation (implement your email/SMS service)
-        // $this->sendConfirmation($patient, $appointment);
+        // Format the appointment date for better readability
+        $appointmentDate = date('F j, Y \a\t g:i A', strtotime($request->datetime));
+
+        // Create confirmation message
+        $message = "Hello {$request->name}, thank you for booking with Reliance Health Clinic! " .
+            "We have received your appointment request for {$request->unit_service} " .
+            "scheduled on {$appointmentDate}. " .
+            "Your confirmation code is: {$confirmationCode}. " .
+            "We will contact you shortly to confirm your appointment.";
+
+        // Send confirmation SMS
+        $smsSent = $this->sendSMS($request->phone, $message);
+
+        // Log SMS status
+        if ($smsSent) {
+            Log::info('Appointment confirmation SMS sent successfully', [
+                'patient_id' => $patient->id,
+                'appointment_id' => $appointment->id,
+                'phone' => $request->phone
+            ]);
+        } else {
+            Log::warning('Failed to send appointment confirmation SMS', [
+                'patient_id' => $patient->id,
+                'appointment_id' => $appointment->id,
+                'phone' => $request->phone
+            ]);
+        }
 
         return response()->json([
             'message' => 'Appointment booked successfully',
             'confirmation_code' => $confirmationCode,
-            'appointment_id' => $appointment->id
+            'appointment_id' => $appointment->id,
+            'sms_sent' => $smsSent
         ], 201);
     }
-
     /**
      * @OA\Get(
      *     path="/appointments",

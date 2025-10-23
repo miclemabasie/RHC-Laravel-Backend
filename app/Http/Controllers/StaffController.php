@@ -6,8 +6,10 @@ use App\Models\Document;
 use App\Models\User;
 use App\Models\StaffProfile;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class StaffController extends Controller
 {
@@ -47,7 +49,10 @@ class StaffController extends Controller
      */
     public function getProfile(Request $request)
     {
+        Log::info('=== START getProfile ===');
+
         $user = $request->user()->load('staffProfile');
+
         return response()->json($user);
     }
 
@@ -113,7 +118,33 @@ class StaffController extends Controller
      */
     public function updateProfile(Request $request)
     {
+        \Log::info('=== START updateProfile ===');
+        \Log::info('Request Method: ' . $request->method());
+        \Log::info('Content-Type: ' . $request->header('Content-Type'));
+        \Log::info('Request Headers: ', $request->headers->all());
+
+        // Debug: Check if this is an Insomnia request with custom boundary
+        $contentType = $request->header('Content-Type');
+        $isInsomniaRequest = str_contains($contentType, 'X-INSOMNIA-BOUNDARY');
+        \Log::info('Is Insomnia request: ' . ($isInsomniaRequest ? 'YES' : 'NO'));
+
+        // Log all request data
+        \Log::info('Request All Data: ', $request->all());
+        \Log::info('Request Files count: ' . count($request->allFiles()));
+        \Log::info('Request Files keys: ', array_keys($request->allFiles()));
+
+        // MANUAL FILE DETECTION FOR INSOMNIA
+        $manualFiles = [];
+        foreach ($request->allFiles() as $key => $file) {
+            $manualFiles[$key] = [
+                'name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+            ];
+        }
+        \Log::info('Manual files detection: ', $manualFiles);
+
         $user = $request->user();
+        \Log::info('User ID: ' . $user->id);
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
@@ -121,34 +152,114 @@ class StaffController extends Controller
             'first_name' => 'sometimes|string|max:255',
             'last_name' => 'sometimes|string|max:255',
             'job_title' => 'sometimes|string|max:255',
-            'department_unit' => 'sometimes|string|max:255'
+            'department_unit' => 'sometimes|string|max:255',
+            'profile_photo' => 'sometimes|file|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
         if ($validator->fails()) {
+            \Log::error('Validation failed: ', $validator->errors()->toArray());
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        \Log::info('Validation passed');
+
         // Update user info
         if ($request->has('name') || $request->has('phone')) {
-            $user->update($request->only(['name', 'phone']));
+            $userData = $request->only(['name', 'phone']);
+            $user->update($userData);
+            \Log::info('User basic info updated');
         }
 
         // Update staff profile
         if ($user->staffProfile) {
-            $user->staffProfile->update($request->only([
+            \Log::info('Staff profile exists for user');
+            $updateData = $request->only([
                 'first_name',
                 'last_name',
                 'job_title',
                 'department_unit'
-            ]));
+            ]);
+
+            \Log::info('Update data (excluding photo): ', $updateData);
+
+            // ENHANCED FILE HANDLING FOR INSOMNIA
+            $profilePhoto = $request->file('profile_photo');
+            \Log::info('Profile photo file object: ' . ($profilePhoto ? 'EXISTS' : 'NULL'));
+
+            if ($profilePhoto) {
+                \Log::info('=== START FILE PROCESSING ===');
+                \Log::info('File details:', [
+                    'original_name' => $profilePhoto->getClientOriginalName(),
+                    'size' => $profilePhoto->getSize(),
+                    'mime_type' => $profilePhoto->getMimeType(),
+                    'extension' => $profilePhoto->getClientOriginalExtension(),
+                    'is_valid' => $profilePhoto->isValid(),
+                    'error' => $profilePhoto->getError(),
+                ]);
+
+                if (!$profilePhoto->isValid()) {
+                    \Log::error('File is invalid: ' . $profilePhoto->getErrorMessage());
+                } else {
+                    // Delete old profile photo if exists
+                    if ($user->staffProfile->profile_photo) {
+                        $oldPhotoPath = str_replace('storage/', '', $user->staffProfile->profile_photo);
+                        \Log::info('Deleting old photo: ' . $oldPhotoPath);
+
+                        if (Storage::disk('public')->exists($oldPhotoPath)) {
+                            Storage::disk('public')->delete($oldPhotoPath);
+                            \Log::info('Old photo deleted');
+                        }
+                    }
+
+                    // Generate filename and store in storage/app/public/profiles
+                    $filename = 'profile_photo_' . time() . '_' . uniqid() . '.' . $profilePhoto->getClientOriginalExtension();
+                    $storagePath = 'profiles';
+
+                    \Log::info('Storing file as: ' . $filename);
+                    \Log::info('Storage path: ' . $storagePath);
+
+                    // Ensure directory exists
+                    if (!Storage::disk('public')->exists($storagePath)) {
+                        Storage::disk('public')->makeDirectory($storagePath);
+                        \Log::info('Created directory: ' . $storagePath);
+                    }
+
+                    // Store the file
+                    $path = $profilePhoto->storeAs($storagePath, $filename, 'public');
+                    \Log::info('Storage returned path: ' . $path);
+
+                    // Verify storage
+                    if ($path && Storage::disk('public')->exists($path)) {
+                        $fileSize = Storage::disk('public')->size($path);
+                        $updateData['profile_photo'] = 'storage/' . $path;
+                        \Log::info('File stored successfully! Size: ' . $fileSize . ' bytes');
+                        \Log::info('Database path: ' . $updateData['profile_photo']);
+                    } else {
+                        \Log::error('File storage failed - path does not exist');
+                    }
+                }
+                \Log::info('=== END FILE PROCESSING ===');
+            } else {
+                \Log::info('No profile_photo file found in request');
+                \Log::info('Available files in request: ', array_keys($request->allFiles()));
+            }
+
+            \Log::info('Final update data: ', $updateData);
+            $user->staffProfile->update($updateData);
+            \Log::info('Staff profile updated');
+
+            // Verify the update
+            $user->load('staffProfile');
+            \Log::info('Updated profile photo in database: ' . $user->staffProfile->profile_photo);
         }
+
+        \Log::info('=== END updateProfile ===');
 
         return response()->json([
             'message' => 'Profile updated successfully',
             'user' => $user->load('staffProfile')
         ]);
     }
-
     /**
      * @OA\Get(
      *     path="/staff/me/employment-info",
